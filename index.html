@@ -98,7 +98,7 @@ h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em}
 .list .type{grid-column:1;font-size:14px;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);margin-top:4px;justify-self:start}
 .filter{width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);margin-bottom:10px;font-size:17px}
 .scanbox{margin:14px 0 6px}
-#scan{width:100%;font-family:var(--code);font-size:18px;padding:14px 12px;border-radius:10px;border:2px dashed var(--line);background:var(--panel);outline:none}
+#scan{display:block;resize:none;overflow:hidden;height:56px;line-height:24px;width:100%;font-family:var(--code);font-size:18px;padding:14px 12px;border-radius:10px;border:2px dashed var(--line);background:var(--panel);outline:none}
 #scan:focus{border-color:var(--active);border-style:solid}
 .hint{font-size:15px;color:var(--muted);margin:6px 2px 14px}
 .hint.lost{display:block;width:100%;text-align:center;background:var(--warn);color:#fff;font-weight:700;font-size:18px;padding:16px;border-radius:10px;cursor:pointer}
@@ -165,7 +165,7 @@ nav button[aria-current="page"]{color:var(--active);border-top-color:var(--activ
     <div id="slots"></div>
     <div class="info" id="info" hidden></div>
     <div class="scanbox">
-      <input id="scan" type="text" inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Código lido" placeholder="Leia o código…">
+      <textarea id="scan" rows="1" inputmode="text" enterkeyhint="enter" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Código lido" placeholder="Leia o código…"></textarea>
       <div class="sugg" id="sugg"></div>
     </div>
     <p class="hint" id="hint">Pronto a ler.</p>
@@ -255,7 +255,7 @@ const LS_REC = "assocRFID.records.v1", LS_SET = "assocRFID.settings.v1";
 /* ---------- Definições ---------- */
 const TYPES = {pda:"PDA Datalogic", ring:"Ring scanner Unitech", codi:"Datalogic CODiScan"};
 const typeName = t => TYPES[t] || (t && String(t).startsWith("x:") ? String(t).slice(2) : "Não indicado");
-const defaults = {op:"", loc:"", order:"st", prefix:"SPT", sound:true, vib:true, nokbd:true, api:"https://script.google.com/macros/s/AKfycbyeC3N5HUprw7NBgdPUAv8BPFS_-Dlp-BQX0FK8fzAHNcAxokS5nTlu7bpo_-Ug1mLK/exec", type:"pda", tp:{pda:"",ring:"",codi:""}, lastExport:0};
+const defaults = {op:"", loc:"", order:"st", prefix:"SPT", sound:true, vib:true, nokbd:false, api:"https://script.google.com/macros/s/AKfycbyeC3N5HUprw7NBgdPUAv8BPFS_-Dlp-BQX0FK8fzAHNcAxokS5nTlu7bpo_-Ug1mLK/exec", type:"pda", tp:{pda:"",ring:"",codi:""}, lastExport:0};
 let S = {...defaults};
 try { S = {...defaults, ...JSON.parse(localStorage.getItem(LS_SET) || "{}")}; } catch(e){}
 S.tp = {...defaults.tp, ...(S.tp||{})};
