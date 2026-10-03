@@ -170,7 +170,7 @@ nav button[aria-current="page"]{color:var(--active);border-top-color:var(--activ
     <div id="slots"></div>
     <div class="info" id="info" hidden></div>
     <div class="scanbox">
-      <textarea id="scan" rows="1" inputmode="text" enterkeyhint="enter" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Código lido" placeholder="Leia o código…"></textarea>
+      <textarea id="scan" rows="1" inputmode="none" enterkeyhint="enter" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Código lido" placeholder="Leia o código…"></textarea>
       <div class="sugg" id="sugg"></div>
     </div>
     <p class="hint" id="hint">Pronto a ler.</p>
@@ -260,7 +260,7 @@ const LS_REC = "assocRFID.records.v1", LS_SET = "assocRFID.settings.v1";
 /* ---------- Definições ---------- */
 const TYPES = {pda:"PDA Datalogic", ring:"Ring scanner Unitech", codi:"Datalogic CODiScan"};
 const typeName = t => TYPES[t] || (t && String(t).startsWith("x:") ? String(t).slice(2) : "Não indicado");
-const defaults = {op:"", loc:"", order:"st", prefix:"SPT", sound:true, vib:true, nokbd:false, api:"https://script.google.com/macros/s/AKfycbyeC3N5HUprw7NBgdPUAv8BPFS_-Dlp-BQX0FK8fzAHNcAxokS5nTlu7bpo_-Ug1mLK/exec", type:"pda", tp:{pda:"",ring:"",codi:""}, lastExport:0};
+const defaults = {op:"", loc:"", order:"st", prefix:"SPT", sound:true, vib:true, nokbd:true, api:"https://script.google.com/macros/s/AKfycbyeC3N5HUprw7NBgdPUAv8BPFS_-Dlp-BQX0FK8fzAHNcAxokS5nTlu7bpo_-Ug1mLK/exec", type:"pda", tp:{pda:"",ring:"",codi:""}, lastExport:0};
 let S = {...defaults};
 try { S = {...defaults, ...JSON.parse(localStorage.getItem(LS_SET) || "{}")}; } catch(e){}
 S.tp = {...defaults.tp, ...(S.tp||{})};
@@ -591,7 +591,11 @@ function onCode(raw){
   let code = clean(raw);
   if (!code || st.overlay) return;
   let target;
-  if (S.prefix) target = key(code).startsWith(key(S.prefix)) ? "tag" : "serial";
+  if (S.prefix){
+    // Aceita a etiqueta mesmo que o leitor acrescente caracteres antes (ex.: "]d2SPT…") ou envie em minúsculas
+    const at = key(code).indexOf(key(S.prefix));
+    if (at >= 0){ code = code.slice(at).toUpperCase(); target = "tag"; } else target = "serial";
+  }
   else target = order().find(k => !st[k]) || order()[0];
   if (target === "serial"){
     const item = listIdx ? listIdx.get(lkey(code)) : null;
