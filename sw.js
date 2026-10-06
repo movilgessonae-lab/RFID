@@ -1,5 +1,5 @@
 // Guarda a app no PDA: abre mesmo sem rede e procura sempre a versão mais recente quando há rede.
-const CACHE = 'app-rfid-v3';
+const CACHE = 'app-rfid-v4';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
