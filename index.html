@@ -284,13 +284,36 @@ try { queue = JSON.parse(localStorage.getItem(LS_Q) || "[]"); } catch(e){ queue 
 const saveQueue = () => { try{ localStorage.setItem(LS_Q, JSON.stringify(queue)); }catch(e){} };
 const gs = (fn, ...args) => IN_GAS
   ? new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args))
-  : fetch(S.api, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({fn, args}), redirect:"follow"})
-      .then(r => r.json()).then(j => j.ok ? j.result : Promise.reject(new Error(j.error || "erro")));
+  : callApi(fn, args);
+let lastErr = "";
+async function callApi(fn, args){
+  const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const tmo = setTimeout(() => ctl && ctl.abort(), 30000);
+  let r;
+  try {
+    r = await fetch(S.api, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({fn, args}), redirect:"follow", signal: ctl ? ctl.signal : undefined});
+  } catch(e){
+    clearTimeout(tmo);
+    throw new Error(e && e.name === "AbortError" ? "O Google demorou mais de 30 segundos a responder." : (navigator.onLine === false ? "O PDA está sem rede." : "Não foi possível contactar o Google (" + (e && e.message || "erro de rede") + ")."));
+  }
+  clearTimeout(tmo);
+  const t = await r.text();
+  let j;
+  try { j = JSON.parse(t); }
+  catch(e){ throw new Error("O Google respondeu com um erro (HTTP " + r.status + "): " + t.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)); }
+  if (!j.ok) throw new Error("Erro no script do Google: " + (j.error || "desconhecido"));
+  return j.result;
+}
 let flushing = false, online = true;
 function setMode(){
   if (!GS){ $("#mode").textContent = "só neste dispositivo"; return; }
   const n = queue.length;
-  $("#mode").textContent = !online ? `sem rede${n ? `, ${n} por enviar` : ""}` : (n ? `a enviar ${n}…` : "ligado ao Google Sheets");
+  const m = $("#mode");
+  if (online) lastErr = "";
+  const why = navigator.onLine === false ? "sem rede" : "sem ligação ao Google";
+  m.textContent = !online ? `${why}${n ? `, ${n} por enviar` : ""} (toque para ver)` : (n ? `a enviar ${n}…` : "ligado ao Google Sheets");
+  m.style.cursor = online ? "" : "pointer";
+  m.style.textDecoration = online ? "" : "underline";
 }
 async function flush(){
   if (!GS || flushing || !queue.length) { setMode(); return; }
@@ -309,7 +332,7 @@ async function flush(){
       }
       setMode();
     }
-  } catch(e){ online = false; }
+  } catch(e){ online = false; lastErr = e.message || String(e); }
   flushing = false; setMode();
 }
 function enqueue(op){ queue.push(op); saveQueue(); flush(); }
@@ -323,7 +346,7 @@ async function pull(){
     const ids = new Set(remote.map(r => r.id));
     records = remote.filter(r => !pendingDels.has(r.id)).concat(pendingAdds.filter(r => !ids.has(r.id)));
     saveLocal(); render();
-  } catch(e){ online = false; }
+  } catch(e){ online = false; lastErr = e.message || String(e); }
   setMode();
 }
 async function pullList(){
@@ -339,7 +362,7 @@ async function pullList(){
       LST.items.push({s:String(sv), u:String(u||""), loja:String(loja||""), nome:String(nome||"")});
     }
     buildIdx(); saveList(); renderListInfo(); render();
-  } catch(e){ online = false; setMode(); }
+  } catch(e){ online = false; lastErr = e.message || String(e); setMode(); }
 }
 async function addRecord(rec, replaceIds){
   records.push(rec); saveLocal(); render();
@@ -828,6 +851,11 @@ $("#b-xlsx2").onclick = exportXlsx;
 /* ---------- Arranque ---------- */
 buildIdx(); renderListInfo(); renderTypes(); render(); focusScan();
 
+$("#mode").addEventListener("click", () => {
+  if (online || !GS) return;
+  alarm(`<h2>Sem ligação ao Google Sheets</h2><p>${esc(lastErr || "Sem detalhes.")}</p><p>${queue.length} leituras guardadas no PDA, por enviar. Não se perdem.</p>`,
+    [{label:"Tentar agora", act:() => { toast("A tentar…"); flush().then(pull).then(() => toast(online ? "Ligado ao Google Sheets." : "Ainda sem ligação.")); }}, {label:"Fechar", ghost:true}]);
+});
 let syncT = null;
 function startSync(){
   GS = IN_GAS || !!S.api;
